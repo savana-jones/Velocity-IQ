@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 
 export default function AuthPage() {
   const searchParams = useSearchParams();
@@ -64,7 +65,9 @@ export default function AuthPage() {
           {/* Social Buttons */}
           <div className="flex flex-col gap-4">
             {/* Google Button */}
-            <button className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition">
+            <button
+            onClick={() => signIn("google",{ callbackUrl: "/connections" })}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition">
               <Image
                 src="/google-logo.webp"
                 alt="Google Logo"
@@ -76,6 +79,7 @@ export default function AuthPage() {
 
             {/* GitHub Button */}
             <button
+              onClick={() => signIn("github",{ callbackUrl: "/connections" })}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-black border border-gray-500 text-white font-semibold 
                 hover:bg-gradient-to-r hover:from-black hover:to-gray-800 transition"
             >
