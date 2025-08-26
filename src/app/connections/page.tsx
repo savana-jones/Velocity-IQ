@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   User,
@@ -45,16 +46,17 @@ const platformsList = [
 type ConnectionKeys = "github" | "jira" | "zendesk" | "salesforce";
 
 const navItems = [
-  { label: "Home", icon: Home },
-  { label: "Connections", icon: GitPullRequest },
-  { label: "Sync Monitor", icon: Activity },
-  { label: "Field Mapping", icon: MapPin },
-  { label: "Analytics", icon: BarChart2 },
-  { label: "Reports", icon: FileText },
-  { label: "Settings", icon: Settings },
+  { label: "Home", icon: Home, path: "/" },
+  { label: "Connections", icon: GitPullRequest, path: "/connections" },
+  { label: "Sync Monitor", icon: Activity, path: "/sync-monitor" },
+  { label: "Field Mapping", icon: MapPin, path: "/field-mapping" },
+  { label: "Analytics", icon: BarChart2, path: "/analytics" },
+  { label: "Reports", icon: FileText, path: "/reports" },
+  { label: "Settings", icon: Settings, path: "/settings" },
 ];
 
 const ConnectionsPage = () => {
+  const router = useRouter();
   const [connections, setConnections] = useState<
     Record<ConnectionKeys, boolean>
   >({
@@ -63,7 +65,6 @@ const ConnectionsPage = () => {
     zendesk: false,
     salesforce: false,
   });
-
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const toggleConnection = (platform: ConnectionKeys) => {
@@ -95,23 +96,24 @@ const ConnectionsPage = () => {
         </div>
 
         <nav className="flex-1 flex flex-col mt-4">
-          {navItems.map(({ label, icon: Icon }) => {
+          {navItems.map(({ label, icon: Icon, path }) => {
             const isSelected = label === "Connections";
             return (
               <button
                 key={label}
+                onClick={() => router.push(path)}
                 className={`flex items-center gap-3 px-4 py-3 rounded transition
-          ${
-            isSelected
-              ? "bg-yellow-500 text-black"
-              : "hover:bg-zinc-800 hover:text-yellow-500"
-          }
-        `}
+                  ${
+                    isSelected
+                      ? "bg-yellow-500 text-black"
+                      : "hover:bg-zinc-800 hover:text-yellow-500"
+                  }
+                `}
               >
                 <Icon
                   className={`w-5 h-5 transition-colors
-            ${isSelected ? "text-black" : "text-yellow-500"}
-          `}
+                    ${isSelected ? "text-black" : "text-yellow-500"}
+                  `}
                 />
                 {sidebarOpen && (
                   <span
@@ -185,9 +187,7 @@ const ConnectionsPage = () => {
                   </div>
                   <p className="text-gray-300 mb-6">{platform.description}</p>
                   <button
-                    onClick={() =>
-                      setConnections((prev) => ({ ...prev, [key]: !prev[key] }))
-                    }
+                    onClick={() => toggleConnection(key)}
                     className={`px-4 py-2 rounded font-semibold transition ${
                       connections[key]
                         ? "bg-green-600 hover:bg-green-700"
