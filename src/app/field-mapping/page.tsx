@@ -142,52 +142,46 @@ const FieldMappingPage = () => {
           </div>
         </header>
 
-        {/* Field Mapping Table */}
+        {/* Field Mapping Cards */}
         <main className="flex-1 p-8 bg-black overflow-auto">
           <h2 className="text-2xl font-semibold text-yellow-500 mb-6">
             Field Mapping
           </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border border-zinc-800 rounded-lg overflow-hidden">
-              <thead className="bg-zinc-900">
-                <tr>
-                  <th className="text-left px-6 py-3 border-b border-zinc-800 text-yellow-500">
-                    Source Field
-                  </th>
-                  <th className="text-left px-6 py-3 border-b border-zinc-800 text-yellow-500">
-                    Destination Field
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {mappings.map((map) => (
-                  <tr key={map.id} className="hover:bg-zinc-800">
-                    <td className="px-6 py-4 border-b border-zinc-800">
-                      {map.source}
-                    </td>
-                    <td className="px-6 py-4 border-b border-zinc-800">
-                      <select
-                        value={map.destination}
-                        onChange={(e) =>
-                          handleMappingChange(map.id, e.target.value)
-                        }
-                        className="bg-zinc-900 text-yellow-500 border border-zinc-700 rounded px-3 py-1 focus:outline-none focus:border-yellow-500"
-                      >
-                        {destinationOptions.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {mappings.map((map) => (
+              <div
+                key={map.id}
+                className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-lg hover:shadow-yellow-500/20 transition"
+              >
+                <h3 className="text-lg font-medium text-yellow-500 mb-4">
+                  {map.source}
+                </h3>
+                <label className="block text-sm text-zinc-400 mb-2">
+                  Map To
+                </label>
+                <select
+                  value={map.destination}
+                  onChange={(e) =>
+                    handleMappingChange(map.id, e.target.value)
+                  }
+                  className="w-full bg-black text-yellow-500 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-yellow-500"
+                >
+                  {destinationOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
           </div>
-          <button className="mt-6 px-6 py-2 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-600 transition">
-            Save Mappings
-          </button>
+
+          <div className="mt-8 flex justify-end">
+            <button className="px-6 py-3 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-600 transition">
+              Save Mappings
+            </button>
+          </div>
         </main>
       </div>
     </div>
