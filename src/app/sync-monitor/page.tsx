@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Bell, User, Menu, X, Home, GitPullRequest, Activity, MapPin, BarChart2, FileText, Settings } from "lucide-react";
+import { Bell, Menu, X, Home, GitPullRequest, Activity, MapPin, BarChart2, FileText, Settings } from "lucide-react";
 
 const syncJobsList = [
   { id: 1, platform: "GitHub", logo: "/github-logo.svg", jobName: "Sync Repositories", status: "success", lastRun: "2025-08-26 10:32 AM" },

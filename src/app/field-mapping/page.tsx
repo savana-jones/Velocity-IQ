@@ -7,42 +7,13 @@ import {
   Menu,
   X,
   Home,
-  Settings,
-  Activity,
   GitPullRequest,
+  Activity,
+  MapPin,
   BarChart2,
   FileText,
-  MapPin,
+  Settings,
 } from "lucide-react";
-
-const platformsList = [
-  {
-    key: "github",
-    name: "GitHub",
-    logo: "/github-logo.svg",
-    description: "Connect your GitHub account to sync repositories and issues.",
-  },
-  {
-    key: "jira",
-    name: "Jira",
-    logo: "/jira-logo.png",
-    description: "Connect your Jira account to sync issues and sprints.",
-  },
-  {
-    key: "zendesk",
-    name: "Zendesk",
-    logo: "/zendesk-logo.png",
-    description: "Connect your Zendesk account to sync tickets and customers.",
-  },
-  {
-    key: "salesforce",
-    name: "Salesforce",
-    logo: "/salesforce-logo.png",
-    description: "Connect Salesforce to sync CRM data and leads.",
-  },
-];
-
-type ConnectionKeys = "github" | "jira" | "zendesk" | "salesforce";
 
 const navItems = [
   { label: "Home", icon: Home, path: "/" },
@@ -54,20 +25,31 @@ const navItems = [
   { label: "Settings", icon: Settings, path: "/settings" },
 ];
 
-const ConnectionsPage = () => {
-  const router = useRouter();
-  const [connections, setConnections] = useState<
-    Record<ConnectionKeys, boolean>
-  >({
-    github: false,
-    jira: false,
-    zendesk: false,
-    salesforce: false,
-  });
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+const fieldMappings = [
+  { id: 1, source: "GitHub Issue Title", destination: "Ticket Subject" },
+  { id: 2, source: "GitHub Issue Body", destination: "Ticket Description" },
+  { id: 3, source: "Jira Story Points", destination: "Effort Estimate" },
+  { id: 4, source: "Zendesk Ticket Status", destination: "Case Status" },
+];
 
-  const toggleConnection = (platform: ConnectionKeys) => {
-    setConnections((prev) => ({ ...prev, [platform]: !prev[platform] }));
+const destinationOptions = [
+  "Ticket Subject",
+  "Ticket Description",
+  "Effort Estimate",
+  "Case Status",
+  "Priority",
+  "Assignee",
+];
+
+const FieldMappingPage = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mappings, setMappings] = useState(fieldMappings);
+  const router = useRouter();
+
+  const handleMappingChange = (id: number, value: string) => {
+    setMappings((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, destination: value } : m))
+    );
   };
 
   return (
@@ -93,10 +75,9 @@ const ConnectionsPage = () => {
             )}
           </button>
         </div>
-
         <nav className="flex-1 flex flex-col mt-4">
           {navItems.map(({ label, icon: Icon, path }) => {
-            const isSelected = label === "Connections";
+            const isSelected = label === "Field Mapping";
             return (
               <button
                 key={label}
@@ -110,9 +91,9 @@ const ConnectionsPage = () => {
                 `}
               >
                 <Icon
-                  className={`w-5 h-5 transition-colors
-                    ${isSelected ? "text-black" : "text-yellow-500"}
-                  `}
+                  className={`w-5 h-5 transition-colors ${
+                    isSelected ? "text-black" : "text-yellow-500"
+                  }`}
                 />
                 {sidebarOpen && (
                   <span
@@ -161,48 +142,56 @@ const ConnectionsPage = () => {
           </div>
         </header>
 
-        {/* Cards */}
-        <main className="flex-1 p-8 bg-black">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {platformsList.map((platform) => {
-              const key = platform.key as ConnectionKeys;
-              return (
-                <div
-                  key={platform.key}
-                  className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col justify-between"
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 flex items-center justify-center">
-                      <Image
-                        src={platform.logo}
-                        alt={`${platform.name} Logo`}
-                        width={40}
-                        height={40}
-                      />
-                    </div>
-                    <h3 className="text-xl font-semibold text-yellow-500">
-                      {platform.name}
-                    </h3>
-                  </div>
-                  <p className="text-gray-300 mb-6">{platform.description}</p>
-                  <button
-                    onClick={() => toggleConnection(key)}
-                    className={`px-4 py-2 rounded font-semibold transition ${
-                      connections[key]
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-yellow-500 text-black hover:bg-yellow-600"
-                    }`}
-                  >
-                    {connections[key] ? "Connected" : "Connect"}
-                  </button>
-                </div>
-              );
-            })}
+        {/* Field Mapping Table */}
+        <main className="flex-1 p-8 bg-black overflow-auto">
+          <h2 className="text-2xl font-semibold text-yellow-500 mb-6">
+            Field Mapping
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border border-zinc-800 rounded-lg overflow-hidden">
+              <thead className="bg-zinc-900">
+                <tr>
+                  <th className="text-left px-6 py-3 border-b border-zinc-800 text-yellow-500">
+                    Source Field
+                  </th>
+                  <th className="text-left px-6 py-3 border-b border-zinc-800 text-yellow-500">
+                    Destination Field
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {mappings.map((map) => (
+                  <tr key={map.id} className="hover:bg-zinc-800">
+                    <td className="px-6 py-4 border-b border-zinc-800">
+                      {map.source}
+                    </td>
+                    <td className="px-6 py-4 border-b border-zinc-800">
+                      <select
+                        value={map.destination}
+                        onChange={(e) =>
+                          handleMappingChange(map.id, e.target.value)
+                        }
+                        className="bg-zinc-900 text-yellow-500 border border-zinc-700 rounded px-3 py-1 focus:outline-none focus:border-yellow-500"
+                      >
+                        {destinationOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+          <button className="mt-6 px-6 py-2 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-600 transition">
+            Save Mappings
+          </button>
         </main>
       </div>
     </div>
   );
 };
 
-export default ConnectionsPage;
+export default FieldMappingPage;
