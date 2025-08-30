@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell, Menu, X, Home, GitPullRequest, Activity, MapPin, BarChart2, FileText, Settings } from "lucide-react";
 
 const syncJobsList = [
-  { id: 1, platform: "GitHub", logo: "/github-logo.svg", jobName: "Sync Repositories", status: "success", lastRun: "2025-08-26 10:32 AM" },
+  { id: 1, platform: "GitHub", logo: "/github-logo.png", jobName: "Sync Repositories", status: "success", lastRun: "2025-08-26 10:32 AM" },
   { id: 2, platform: "Jira", logo: "/jira-logo.png", jobName: "Sync Issues", status: "pending", lastRun: "2025-08-26 09:15 AM" },
   { id: 3, platform: "Zendesk", logo: "/zendesk-logo.png", jobName: "Sync Tickets", status: "failed", lastRun: "2025-08-25 08:45 PM" },
   { id: 4, platform: "Salesforce", logo: "/salesforce-logo.png", jobName: "Sync Leads", status: "success", lastRun: "2025-08-26 11:00 AM" },
@@ -86,9 +86,13 @@ const SyncMonitorPage = () => {
             {syncJobsList.map((job) => (
               <div key={job.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col justify-between">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-10 h-10 flex items-center justify-center">
-                    <Image src={job.logo} alt={`${job.platform} Logo`} width={40} height={40} />
-                  </div>
+                  {job.platform === "GitHub" ? (
+                    <Image src={job.logo} alt="GitHub Logo" width={46} height={46} className="rounded-full" />
+                  ) : (
+                    <div className="w-10 h-10 flex items-center justify-center">
+                      <Image src={job.logo} alt={`${job.platform} Logo`} width={40} height={40} />
+                    </div>
+                  )}
                   <h3 className="text-xl font-semibold text-yellow-500">{job.jobName}</h3>
                 </div>
                 <p className="text-gray-300 mb-4">{job.platform}</p>

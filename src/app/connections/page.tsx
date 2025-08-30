@@ -19,13 +19,13 @@ const platformsList = [
   {
     key: "github",
     name: "GitHub",
-    logo: "/github-logo.svg",
+    logo: "/github-logo.svg", // dark logo, special handling
     description: "Connect your GitHub account to sync repositories and issues.",
   },
   {
     key: "jira",
     name: "Jira",
-    logo: "/jira-logo.png",
+    logo: "/jira-logo.svg",
     description: "Connect your Jira account to sync issues and sprints.",
   },
   {
@@ -40,7 +40,7 @@ const platformsList = [
     logo: "/salesforce-logo.png",
     description: "Connect Salesforce to sync CRM data and leads.",
   },
-];
+] as const;
 
 type ConnectionKeys = "github" | "jira" | "zendesk" | "salesforce";
 
@@ -52,13 +52,11 @@ const navItems = [
   { label: "Analytics", icon: BarChart2, path: "/analytics" },
   { label: "Reports", icon: FileText, path: "/reports" },
   { label: "Settings", icon: Settings, path: "/settings" },
-];
+] as const;
 
 const ConnectionsPage = () => {
   const router = useRouter();
-  const [connections, setConnections] = useState<
-    Record<ConnectionKeys, boolean>
-  >({
+  const [connections, setConnections] = useState<Record<ConnectionKeys, boolean>>({
     github: false,
     jira: false,
     zendesk: false,
@@ -85,12 +83,9 @@ const ConnectionsPage = () => {
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="text-yellow-500 focus:outline-none"
+            aria-label="Toggle sidebar"
           >
-            {sidebarOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
+            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
 
@@ -101,7 +96,7 @@ const ConnectionsPage = () => {
               <button
                 key={label}
                 onClick={() => router.push(path)}
-                className={`flex items-center gap-3 px-4 py-3 rounded transition
+                className={`group flex items-center gap-3 px-4 py-3 rounded transition
                   ${
                     isSelected
                       ? "bg-yellow-500 text-black"
@@ -111,13 +106,17 @@ const ConnectionsPage = () => {
               >
                 <Icon
                   className={`w-5 h-5 transition-colors
-                    ${isSelected ? "text-black" : "text-yellow-500"}
+                    ${
+                      isSelected
+                        ? "text-black"
+                        : "text-yellow-500 group-hover:text-yellow-500"
+                    }
                   `}
                 />
                 {sidebarOpen && (
                   <span
                     className={`transition-colors ${
-                      isSelected ? "text-black" : ""
+                      isSelected ? "text-black" : "group-hover:text-yellow-500"
                     }`}
                   >
                     {label}
@@ -163,37 +162,58 @@ const ConnectionsPage = () => {
 
         {/* Cards */}
         <main className="flex-1 p-8 bg-black">
+          <h2 className="text-2xl font-semibold text-yellow-500 mb-6">
+            Connections
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {platformsList.map((platform) => {
               const key = platform.key as ConnectionKeys;
+              const isConnected = connections[key];
               return (
                 <div
                   key={platform.key}
                   className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col justify-between"
                 >
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 flex items-center justify-center">
+                    {platform.key === "github" ? (
+                      // GitHub only → white circle
+                      <span className="w-10 h-10 flex items-center justify-center rounded-full bg-white">
+                        <Image
+                          src={platform.logo}
+                          alt={`${platform.name} Logo`}
+                          width={48}
+                          height={48}
+                          className="object-contain"
+                        />
+                      </span>
+                    ) : (
+                      // Others → normal
                       <Image
                         src={platform.logo}
                         alt={`${platform.name} Logo`}
                         width={40}
                         height={40}
+                        className="object-contain"
                       />
-                    </div>
+                    )}
                     <h3 className="text-xl font-semibold text-yellow-500">
                       {platform.name}
                     </h3>
                   </div>
+
                   <p className="text-gray-300 mb-6">{platform.description}</p>
+
                   <button
                     onClick={() => toggleConnection(key)}
-                    className={`px-4 py-2 rounded font-semibold transition ${
-                      connections[key]
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-yellow-500 text-black hover:bg-yellow-600"
-                    }`}
+                    className={`px-4 py-2 rounded font-semibold transition
+                      ${
+                        isConnected
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-yellow-500 text-black hover:bg-yellow-600"
+                      }
+                    `}
                   >
-                    {connections[key] ? "Connected" : "Connect"}
+                    {isConnected ? "Connected" : "Connect"}
                   </button>
                 </div>
               );
