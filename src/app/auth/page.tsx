@@ -66,7 +66,7 @@ export default function AuthPage() {
           <div className="flex flex-col gap-4">
             {/* Google Button */}
             <button
-            onClick={() => signIn("google",{ callbackUrl: "/connections" })}
+            onClick={() => signIn("google",{ callbackUrl: "/dashboard" })}
             className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition">
               <Image
                 src="/google-logo.webp"
@@ -79,7 +79,7 @@ export default function AuthPage() {
 
             {/* GitHub Button */}
             <button
-              onClick={() => signIn("github",{ callbackUrl: "/connections" })}
+              onClick={() => signIn("github",{ callbackUrl: "/dashboard" })}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-black border border-gray-500 text-white font-semibold 
                 hover:bg-gradient-to-r hover:from-black hover:to-gray-800 transition"
             >
