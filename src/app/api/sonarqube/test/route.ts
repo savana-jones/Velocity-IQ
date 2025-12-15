@@ -36,7 +36,13 @@ export async function GET() {
     }
 
     const data = await response.json();
-    
+    console.log("SONAR API RESPONSE");
+    if (data.component?.measures) {
+      data.component.measures.forEach((m) => {
+        console.log(`${m.metric}: ${m.value}`);
+      });
+    }
+
     return NextResponse.json({
       success: true,
       connected: true,

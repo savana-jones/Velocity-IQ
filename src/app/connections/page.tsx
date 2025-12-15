@@ -66,32 +66,79 @@ type ConnectionStatus = {
   syncStatus?: "success" | "failed" | "pending";
   repoCount?: number;
   projectCount?: number;
+  issueCount?: number;
+  username?: string;
 };
 
 const IntegrationsPage = () => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
-  // Mock connection statuses
   const [connections, setConnections] = useState<Record<ConnectionKeys, ConnectionStatus>>({
     github: {
-      connected: true,
-      lastSync: "2 hours ago",
-      syncStatus: "success",
-      repoCount: 12,
+      connected: false,
     },
     jira: {
-      connected: true,
-      lastSync: "5 hours ago",
-      syncStatus: "success",
-      projectCount: 3,
+      connected: false,
     },
     sonarqube: {
       connected: false,
     },
   });
 
-  // SonarQube real connection test
+  // Jira connection test
+  const testJiraConnection = async () => {
+    // Show loading state
+    setConnections((prev) => ({
+      ...prev,
+      jira: {
+        connected: false,
+        lastSync: "Connecting...",
+        syncStatus: "pending",
+      },
+    }));
+
+    try {
+      const response = await fetch('/api/jira/test');
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(
+          `Jira connected successfully!\n\n` +
+          `User: ${data.user.displayName}\n`
+        );
+        setConnections((prev) => ({
+          ...prev,
+          jira: {
+            connected: true,
+            lastSync: "Just now",
+            syncStatus: "success",
+            projectCount: data.projectCount,
+            issueCount: data.issueCount,
+            username: data.user.displayName,
+          },
+        }));
+      } else {
+        alert('Connection failed:\n\n' + (data.error || 'Unknown error'));
+        setConnections((prev) => ({
+          ...prev,
+          jira: {
+            connected: false,
+          },
+        }));
+      }
+    } catch (error: any) {
+      alert('Connection failed:\n\n' + error.message);
+      setConnections((prev) => ({
+        ...prev,
+        jira: {
+          connected: false,
+        },
+      }));
+    }
+  };
+
+  // SonarQube connection test
   const testSonarQubeConnection = async () => {
     // Show loading state
     setConnections((prev) => ({
@@ -109,7 +156,7 @@ const IntegrationsPage = () => {
       
       if (data.success) {
         alert(
-          `✅ SonarQube connected successfully!\n\n` +
+          `SonarQube connected successfully!\n\n` +
           `Project: ${data.projectName || data.projectKey}\n` +
           `Metrics found: ${data.metrics?.length || 0}`
         );
@@ -123,7 +170,7 @@ const IntegrationsPage = () => {
           },
         }));
       } else {
-        alert('❌ Connection failed:\n\n' + (data.error || 'Unknown error'));
+        alert('Connection failed:\n\n' + (data.error || 'Unknown error'));
         setConnections((prev) => ({
           ...prev,
           sonarqube: {
@@ -132,7 +179,7 @@ const IntegrationsPage = () => {
         }));
       }
     } catch (error: any) {
-      alert('❌ Connection failed:\n\n' + error.message);
+      alert('Connection failed:\n\n' + error.message);
       setConnections((prev) => ({
         ...prev,
         sonarqube: {
@@ -143,7 +190,22 @@ const IntegrationsPage = () => {
   };
 
   const handleConnect = (key: ConnectionKeys) => {
-    // For SonarQube, use real API connection
+    // For Jira
+    if (key === "jira") {
+      if (connections[key].connected) {
+        // Disconnect
+        setConnections((prev) => ({
+          ...prev,
+          [key]: { connected: false },
+        }));
+      } else {
+        // Connect using real API
+        testJiraConnection();
+      }
+      return;
+    }
+
+    // For SonarQube
     if (key === "sonarqube") {
       if (connections[key].connected) {
         // Disconnect
@@ -158,7 +220,7 @@ const IntegrationsPage = () => {
       return;
     }
 
-    // For GitHub and Jira, use mock for now
+    // For GitHub, use mock for now
     if (connections[key].connected) {
       // Disconnect
       setConnections((prev) => ({
@@ -173,6 +235,7 @@ const IntegrationsPage = () => {
           connected: true,
           lastSync: "Just now",
           syncStatus: "success",
+          repoCount: 12,
         },
       }));
     }
@@ -380,6 +443,11 @@ const IntegrationsPage = () => {
                             Syncing...
                           </div>
                         )}
+                        {status.username && (
+                          <p className="text-xs text-gray-400 mt-2">
+                            Connected as: {status.username}
+                          </p>
+                        )}
                         {status.repoCount && (
                           <p className="text-xs text-gray-400 mt-2">
                             {status.repoCount} repositories connected
@@ -388,6 +456,11 @@ const IntegrationsPage = () => {
                         {status.projectCount && (
                           <p className="text-xs text-gray-400 mt-2">
                             {status.projectCount} projects connected
+                          </p>
+                        )}
+                        {status.issueCount !== undefined && (
+                          <p className="text-xs text-gray-400 mt-2">
+                            {status.issueCount} issues tracked
                           </p>
                         )}
                       </div>
