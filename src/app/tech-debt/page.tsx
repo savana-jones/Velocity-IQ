@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useSession, signIn, signOut } from "next-auth/react";
+import {  signOut } from "next-auth/react";
 import {
   Bell,
   Menu,
@@ -43,88 +43,7 @@ type TechDebtItem = {
   duplication: number;
 };
 
-const mockTechDebt: TechDebtItem[] = [
-  {
-    id: "TD-001",
-    module: "Payment Gateway",
-    riskScore: 9.2,
-    codeQuality: 4.5,
-    changeFrequency: 8.7,
-    businessPriority: "P0",
-    bugCount: 12,
-    filesAffected: ["payment.service.ts", "checkout.controller.ts", "stripe.integration.ts"],
-    jiraTicket: "PROJ-456",
-    lastUpdated: "2 hours ago",
-    complexity: 85,
-    duplication: 42,
-  },
-  {
-    id: "TD-002",
-    module: "Authentication Service",
-    riskScore: 8.7,
-    codeQuality: 5.2,
-    changeFrequency: 7.5,
-    businessPriority: "P0",
-    bugCount: 8,
-    filesAffected: ["auth.service.ts", "jwt.util.ts", "user.model.ts", "session.manager.ts"],
-    jiraTicket: "PROJ-123",
-    lastUpdated: "5 hours ago",
-    complexity: 78,
-    duplication: 35,
-  },
-  {
-    id: "TD-003",
-    module: "User Profile",
-    riskScore: 7.5,
-    codeQuality: 6.1,
-    changeFrequency: 6.2,
-    businessPriority: "P1",
-    bugCount: 5,
-    filesAffected: ["profile.component.tsx", "avatar.service.ts", "settings.controller.ts"],
-    lastUpdated: "1 day ago",
-    complexity: 62,
-    duplication: 28,
-  },
-  {
-    id: "TD-004",
-    module: "Notification Service",
-    riskScore: 6.8,
-    codeQuality: 6.5,
-    changeFrequency: 5.8,
-    businessPriority: "P2",
-    bugCount: 4,
-    filesAffected: ["notification.service.ts", "email.template.ts"],
-    lastUpdated: "2 days ago",
-    complexity: 55,
-    duplication: 22,
-  },
-  {
-    id: "TD-005",
-    module: "Admin Dashboard",
-    riskScore: 5.9,
-    codeQuality: 6.8,
-    changeFrequency: 4.5,
-    businessPriority: "P1",
-    bugCount: 3,
-    filesAffected: ["admin.panel.tsx", "analytics.service.ts", "reports.controller.ts"],
-    lastUpdated: "3 days ago",
-    complexity: 48,
-    duplication: 18,
-  },
-  {
-    id: "TD-006",
-    module: "Search Engine",
-    riskScore: 5.2,
-    codeQuality: 7.2,
-    changeFrequency: 3.8,
-    businessPriority: "P2",
-    bugCount: 2,
-    filesAffected: ["search.service.ts", "indexer.util.ts"],
-    lastUpdated: "5 days ago",
-    complexity: 42,
-    duplication: 15,
-  },
-];
+
 
 const TechnicalDebtPage = () => {
   const router = useRouter();
@@ -133,6 +52,35 @@ const TechnicalDebtPage = () => {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"risk" | "bugs" | "updated">("risk");
+
+  const [techDebtItems, setTechDebtItems] = useState<TechDebtItem[]>([]);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState<string | null>(null);
+
+useEffect(() => {
+  loadTechDebt();
+}, []);
+
+const loadTechDebt = async () => {
+  setLoading(true);
+  setError(null);
+
+  try {
+    const response = await fetch('/api/tech-debt');
+    const data = await response.json();
+
+    if (data.success) {
+      setTechDebtItems(data.items);
+    } else {
+      setError(data.error || 'Failed to load technical debt');
+    }
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedItems);
@@ -163,7 +111,7 @@ const TechnicalDebtPage = () => {
   };
 
   // Filter and sort
-  let filteredDebt = mockTechDebt;
+  let filteredDebt = techDebtItems;
   if (filterPriority !== "all") {
     filteredDebt = filteredDebt.filter((item) => item.businessPriority === filterPriority);
   }
@@ -176,6 +124,11 @@ const TechnicalDebtPage = () => {
   const createJiraTicket = (item: TechDebtItem) => {
     alert(`Creating Jira ticket for ${item.module}...\n\nTitle: Fix Technical Debt in ${item.module}\nRisk Score: ${item.riskScore}/10\nPriority: ${item.businessPriority}`);
   };
+  if (loading) return <div className="flex h-screen bg-black text-white items-center justify-center">
+        <div className="text-yellow-500">Loading Technical Debt...</div>
+      </div>;
+  if (error) return <div className="flex h-screen bg-black text-white items-center justify-center">
+        <div className="text-yellow-500">Error: {error}</div></div>;
 
   return (
     <div className="flex h-screen bg-black text-white">
