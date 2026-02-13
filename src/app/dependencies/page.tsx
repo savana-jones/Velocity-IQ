@@ -30,7 +30,6 @@ const navItems = [
   { label: "Settings", icon: Settings, path: "/settings" },
 ] as const;
 
-type ConnectionKeys = "github" | "jira" | "sonarqube";
 type DependencyType = "hidden" | "known" | "suggested";
 type DependencyStatus = "pending" | "confirmed" | "dismissed";
 
@@ -56,132 +55,6 @@ type Dependency = {
   sharedFiles: string[];
 };
 
-const mockDependencies: Dependency[] = [
-  {
-    id: "DEP-001",
-    source: {
-      id: "PROJ-234",
-      title: "Implement OAuth2 authentication",
-      assignee: "Alice",
-      status: "In Progress",
-    },
-    target: {
-      id: "PROJ-267",
-      title: "Add user session management",
-      assignee: "Bob",
-      status: "In Progress",
-    },
-    type: "hidden",
-    status: "pending",
-    confidence: 92,
-    reasons: [
-      "Both tasks modify UserService.ts",
-      "Semantic similarity: 87%",
-      "Both mention 'authentication' and 'session'",
-    ],
-    detectedDate: "2 hours ago",
-    sharedFiles: ["UserService.ts", "auth.middleware.ts"],
-  },
-  {
-    id: "DEP-002",
-    source: {
-      id: "PROJ-156",
-      title: "Redesign payment flow UI",
-      assignee: "Carol",
-      status: "In Progress",
-    },
-    target: {
-      id: "PROJ-178",
-      title: "Update payment gateway API",
-      assignee: "Dave",
-      status: "Code Review",
-    },
-    type: "hidden",
-    status: "pending",
-    confidence: 85,
-    reasons: [
-      "Both modify payment-related files",
-      "High temporal correlation in commits",
-      "Shared component dependencies",
-    ],
-    detectedDate: "5 hours ago",
-    sharedFiles: ["PaymentForm.tsx", "payment.service.ts", "checkout.controller.ts"],
-  },
-  {
-    id: "DEP-003",
-    source: {
-      id: "PROJ-189",
-      title: "Add real-time notifications",
-      assignee: "Eve",
-      status: "To Do",
-    },
-    target: {
-      id: "PROJ-201",
-      title: "Implement WebSocket infrastructure",
-      assignee: "Frank",
-      status: "In Progress",
-    },
-    type: "suggested",
-    status: "confirmed",
-    confidence: 95,
-    reasons: [
-      "Notification system requires WebSocket",
-      "Explicit dependency in requirements",
-      "Both tickets linked in comments",
-    ],
-    detectedDate: "1 day ago",
-    sharedFiles: ["websocket.service.ts", "notification.handler.ts"],
-  },
-  {
-    id: "DEP-004",
-    source: {
-      id: "PROJ-145",
-      title: "Optimize database queries",
-      assignee: "Grace",
-      status: "Done",
-    },
-    target: {
-      id: "PROJ-223",
-      title: "Update analytics dashboard",
-      assignee: "Henry",
-      status: "In Progress",
-    },
-    type: "known",
-    status: "confirmed",
-    confidence: 78,
-    reasons: [
-      "Dashboard relies on optimized queries",
-      "Performance improvements impact analytics",
-    ],
-    detectedDate: "2 days ago",
-    sharedFiles: ["analytics.service.ts", "database.util.ts"],
-  },
-  {
-    id: "DEP-005",
-    source: {
-      id: "PROJ-198",
-      title: "Refactor authentication module",
-      assignee: "Ivy",
-      status: "Code Review",
-    },
-    target: {
-      id: "PROJ-212",
-      title: "Add multi-factor authentication",
-      assignee: "Jack",
-      status: "To Do",
-    },
-    type: "hidden",
-    status: "pending",
-    confidence: 88,
-    reasons: [
-      "MFA requires updated auth module",
-      "Semantic similarity: 91%",
-      "Both modify AuthService.ts",
-    ],
-    detectedDate: "3 hours ago",
-    sharedFiles: ["AuthService.ts", "mfa.handler.ts"],
-  },
-];
 
 // Graph node type
 type GraphNode = {
@@ -204,16 +77,49 @@ type GraphEdge = {
   confidence: number;
 };
 
+
+
 const DependenciesPage = () => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [dependencies, setDependencies] = useState(mockDependencies);
+  const [dependencies, setDependencies] = useState<Dependency[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [filterType, setFilterType] = useState<"all" | DependencyType>("all");
   const [filterStatus, setFilterStatus] = useState<"all" | DependencyStatus>("all");
   const [selectedDep, setSelectedDep] = useState<Dependency | null>(null);
   const [viewMode, setViewMode] = useState<"graph" | "list">("graph");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+  loadDependencies();
+}, []);
+
+const loadDependencies = async () => {
+  setLoading(true);
+  setError(null);
+
+  try {
+    const res = await fetch("/api/dependencies");
+    const data = await res.json();
+
+    if (data.success) {
+      setDependencies(data.dependencies);
+    } else {
+      setError(data.error);
+    }
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+const shortName = (path: string) => {
+  return path.split("/").pop() || path;
+};
+
 
   // Generate graph data
   const generateGraphData = () => {
@@ -228,7 +134,7 @@ const DependenciesPage = () => {
           id: dep.source.id,
           x: 0,
           y: 0,
-          label: dep.source.id,
+          label: shortName(dep.source.id),
           type: "task",
           data: {
             assignee: dep.source.assignee,
@@ -241,7 +147,7 @@ const DependenciesPage = () => {
           id: dep.target.id,
           x: 0,
           y: 0,
-          label: dep.target.id,
+          label: shortName(dep.target.id),
           type: "task",
           data: {
             assignee: dep.target.assignee,
@@ -261,9 +167,9 @@ const DependenciesPage = () => {
 
     // Position nodes in a circular layout
     const nodeArray = Array.from(nodeMap.values());
-    const centerX = 400;
-    const centerY = 300;
-    const radius = 200;
+    const centerX = 600;
+    const centerY = 400;
+    const radius = 320;
 
     nodeArray.forEach((node, i) => {
       const angle = (i / nodeArray.length) * 2 * Math.PI;
@@ -344,9 +250,14 @@ const DependenciesPage = () => {
 
       // Node label
       ctx.fillStyle = "#ffffff";
-      ctx.font = "12px monospace";
+      ctx.font = "10px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(node.label, node.x, node.y - 30);
+      const text = node.label.length > 14
+        ? node.label.slice(0, 14) + "…"
+        : node.label;
+
+      ctx.fillText(text, node.x, node.y - 30);
+
 
       // Assignee
       ctx.fillStyle = "#a1a1aa";
@@ -594,8 +505,8 @@ const DependenciesPage = () => {
               </div>
               <canvas
                 ref={canvasRef}
-                width={800}
-                height={600}
+                width={1200}
+                height={800}
                 className="w-full bg-black rounded-lg border border-zinc-700"
               />
               <p className="text-xs text-gray-500 mt-2 text-center">
@@ -668,9 +579,11 @@ const DependenciesPage = () => {
                     <div className="bg-black rounded-lg p-4 border border-zinc-700">
                       <div className="text-xs text-gray-500 mb-1">Source Task</div>
                       <div className="text-sm font-semibold text-yellow-500 mb-1">
-                        {dep.source.id}
+                        {shortName(dep.source.id)}
                       </div>
-                      <div className="text-sm text-white mb-2">{dep.source.title}</div>
+                      <div className="text-sm text-white mb-2 break-all whitespace-normal">
+                        {dep.source.title}
+                      </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-gray-400">Assignee: {dep.source.assignee}</span>
                         <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded">
@@ -691,9 +604,11 @@ const DependenciesPage = () => {
                     <div className="bg-black rounded-lg p-4 border border-zinc-700">
                       <div className="text-xs text-gray-500 mb-1">Target Task</div>
                       <div className="text-sm font-semibold text-yellow-500 mb-1">
-                        {dep.target.id}
+                        {shortName(dep.target.id)}
                       </div>
-                      <div className="text-sm text-white mb-2">{dep.target.title}</div>
+                      <div className="text-sm text-white mb-2 break-all whitespace-normal">
+                        {dep.target.title}
+                      </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-gray-400">Assignee: {dep.target.assignee}</span>
                         <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded">
@@ -726,7 +641,7 @@ const DependenciesPage = () => {
                             key={file}
                             className="px-2 py-1 bg-black text-gray-300 text-xs rounded border border-zinc-700 font-mono"
                           >
-                            {file}
+                            {shortName(file)}
                           </span>
                         ))}
                       </div>
