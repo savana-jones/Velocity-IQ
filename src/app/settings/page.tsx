@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -16,12 +17,10 @@ import {
   Sun,
   Trash2,
   Save,
-  Key,
   Shield,
   Zap,
 } from "lucide-react";
 
-/* ----------------------------- Nav Items ----------------------------- */
 const navItems = [
   { label: "Dashboard", icon: Home, path: "/" },
   { label: "Integrations", icon: GitPullRequest, path: "/connections" },
@@ -31,18 +30,120 @@ const navItems = [
   { label: "Settings", icon: Settings, path: "/settings" },
 ] as const;
 
-/* ----------------------------- Settings Page ----------------------------- */
 const SettingsPage = () => {
+  const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
+  const router = useRouter();
+  
+  // Form state
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [slackNotifications, setSlackNotifications] = useState(false);
+  const [slackWebhookUrl, setSlackWebhookUrl] = useState("");
   const [autoSync, setAutoSync] = useState(true);
   const [syncInterval, setSyncInterval] = useState("30");
-  const router = useRouter();
+  const [riskThreshold, setRiskThreshold] = useState(8.0);
+  const [language, setLanguage] = useState("en-US");
+  const [timezone, setTimezone] = useState("UTC");
+  const [darkMode, setDarkMode] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleSaveProfile = () => {
-    alert("Profile settings saved successfully!");
+  // Load preferences on mount
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.email) {
+      loadPreferences();
+    } else if (status === "unauthenticated") {
+      router.push("/auth");
+    }
+  }, [session, status, router]);
+
+  const loadPreferences = async () => {
+    try {
+      const response = await fetch('/api/preferences');
+      const data = await response.json();
+      
+      if (data.success && data.preferences) {
+        const prefs = data.preferences;
+        setFullName(prefs.fullName || '');
+        setEmail(session?.user?.email || '');
+        setEmailNotifications(prefs.emailNotifications);
+        setSlackNotifications(prefs.slackNotifications);
+        setSlackWebhookUrl(prefs.slackWebhookUrl || '');
+        setAutoSync(prefs.autoSync);
+        setSyncInterval(prefs.syncInterval.toString());
+        setRiskThreshold(prefs.riskScoreThreshold);
+        setLanguage(prefs.language);
+        setTimezone(prefs.timezone);
+        setDarkMode(prefs.darkMode);
+      }
+    } catch (error) {
+      console.error('Failed to load preferences:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName,
+          emailNotifications,
+          slackNotifications,
+          slackWebhookUrl,
+          autoSync,
+          syncInterval: parseInt(syncInterval),
+          riskScoreThreshold: riskThreshold,
+          language,
+          timezone,
+          darkMode,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert("Settings saved successfully!");
+      } else {
+        alert("Failed to save settings: " + data.error);
+      }
+    } catch (error: any) {
+      alert("Error: " + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      const response = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: '🧪 Test Notification from VelocityIQ',
+          message: 'This is a test notification. Your notification settings are working correctly!',
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        let msg = 'Test notification sent!\n\n';
+        if (data.sent.email) msg += '📧 Email: Sent\n';
+        if (data.sent.slack) msg += '💬 Slack: Sent\n';
+        if (!data.sent.email && !data.sent.slack) {
+          msg = 'No notifications sent. Enable email or Slack notifications first.';
+        }
+        alert(msg);
+      }
+    } catch (error: any) {
+      alert('Error: ' + error.message);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -51,11 +152,17 @@ const SettingsPage = () => {
     }
   };
 
-  const handleResetAPIKey = () => {
-    if (confirm("Generate a new API key? Your old key will be immediately invalidated.")) {
-      alert("New API key generated: viq_abc123xyz789");
-    }
-  };
+  if (status === "loading" || loading) {
+    return (
+      <div className="flex h-screen bg-black text-white items-center justify-center">
+        <div className="text-yellow-500">Loading settings...</div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   return (
     <div className="flex h-screen bg-black text-white">
@@ -150,7 +257,8 @@ const SettingsPage = () => {
                 <input
                   type="text"
                   placeholder="John Doe"
-                  defaultValue="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className="w-full p-3 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white"
                 />
               </div>
@@ -158,43 +266,28 @@ const SettingsPage = () => {
                 <label className="text-xs text-gray-400 mb-1 block">Email</label>
                 <input
                   type="email"
-                  placeholder="john@example.com"
-                  defaultValue="john@example.com"
-                  className="w-full p-3 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 mb-1 block">New Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full p-3 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 mb-1 block">Confirm Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full p-3 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white"
+                  value={email}
+                  disabled
+                  className="w-full p-3 rounded-lg bg-zinc-800 border border-zinc-700 text-gray-500 cursor-not-allowed"
                 />
               </div>
             </div>
-            <button
-              onClick={handleSaveProfile}
-              className="mt-4 px-6 py-2 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-600 transition flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              Save Changes
-            </button>
           </section>
 
           {/* Notification Preferences */}
           <section className="mb-8 bg-zinc-900 rounded-xl p-6 border border-zinc-800">
-            <h3 className="text-lg font-semibold text-yellow-500 mb-4 flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              Notifications
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-yellow-500 flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                Notifications
+              </h3>
+              <button
+                onClick={handleTestNotification}
+                className="px-3 py-1 text-sm bg-yellow-500 text-black rounded-lg hover:bg-yellow-600 transition"
+              >
+                Send Test
+              </button>
+            </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-black rounded-lg border border-zinc-700">
                 <div>
@@ -229,6 +322,22 @@ const SettingsPage = () => {
                   {slackNotifications ? "On" : "Off"}
                 </button>
               </div>
+
+              {slackNotifications && (
+                <div className="p-3 bg-black rounded-lg border border-zinc-700">
+                  <label className="text-xs text-gray-400 mb-1 block">Slack Webhook URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://hooks.slack.com/services/..."
+                    value={slackWebhookUrl}
+                    onChange={(e) => setSlackWebhookUrl(e.target.value)}
+                    className="w-full p-2 rounded-lg bg-zinc-900 border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white text-sm"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    Get your webhook URL from Slack's Incoming Webhooks app
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
@@ -269,9 +378,6 @@ const SettingsPage = () => {
                   <option value="180">Every 3 hours</option>
                   <option value="360">Every 6 hours</option>
                 </select>
-                <div className="text-xs text-gray-400 mt-1">
-                  Current: Every {syncInterval} minutes
-                </div>
               </div>
 
               <div className="p-3 bg-black rounded-lg border border-zinc-700">
@@ -282,43 +388,14 @@ const SettingsPage = () => {
                     min="5"
                     max="10"
                     step="0.5"
-                    defaultValue="8"
+                    value={riskThreshold}
+                    onChange={(e) => setRiskThreshold(parseFloat(e.target.value))}
                     className="flex-1"
                   />
-                  <span className="text-yellow-500 font-bold">8.0</span>
+                  <span className="text-yellow-500 font-bold w-12">{riskThreshold.toFixed(1)}</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-1">
                   Alert when risk score exceeds this threshold
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* API Settings */}
-          <section className="mb-8 bg-zinc-900 rounded-xl p-6 border border-zinc-800">
-            <h3 className="text-lg font-semibold text-yellow-500 mb-4 flex items-center gap-2">
-              <Key className="w-5 h-5" />
-              API Access
-            </h3>
-            <div className="space-y-4">
-              <div className="p-4 bg-black rounded-lg border border-zinc-700">
-                <div className="mb-2 text-sm text-gray-400">Your API Key</div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="password"
-                    value="viq_1234567890abcdef"
-                    readOnly
-                    className="flex-1 p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white font-mono text-sm"
-                  />
-                  <button
-                    onClick={handleResetAPIKey}
-                    className="px-4 py-2 bg-zinc-800 text-yellow-500 font-semibold rounded-lg hover:bg-zinc-700 transition"
-                  >
-                    Reset Key
-                  </button>
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  Keep your API key secure. Never share it publicly.
                 </div>
               </div>
             </div>
@@ -330,21 +407,29 @@ const SettingsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Language</label>
-                <select className="w-full p-3 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white">
-                  <option>English (US)</option>
-                  <option>English (UK)</option>
-                  <option>Deutsch</option>
-                  <option>Français</option>
+                <select 
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full p-3 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white"
+                >
+                  <option value="en-US">English (US)</option>
+                  <option value="en-UK">English (UK)</option>
+                  <option value="de">Deutsch</option>
+                  <option value="fr">Français</option>
                 </select>
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Timezone</label>
-                <select className="w-full p-3 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white">
-                  <option>UTC</option>
-                  <option>GMT</option>
-                  <option>EST</option>
-                  <option>PST</option>
-                  <option>IST (India)</option>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full p-3 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white"
+                >
+                  <option value="UTC">UTC</option>
+                  <option value="GMT">GMT</option>
+                  <option value="EST">EST</option>
+                  <option value="PST">PST</option>
+                  <option value="IST">IST (India)</option>
                 </select>
               </div>
             </div>
@@ -364,6 +449,18 @@ const SettingsPage = () => {
             </div>
           </section>
 
+          {/* Save Button */}
+          <div className="flex justify-end mb-8">
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving}
+              className="px-6 py-3 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-600 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save className="w-5 h-5" />
+              {saving ? 'Saving...' : 'Save All Settings'}
+            </button>
+          </div>
+
           {/* Danger Zone */}
           <section className="bg-zinc-900 rounded-xl p-6 border border-red-800">
             <h3 className="text-lg font-semibold text-red-500 mb-4">Danger Zone</h3>
@@ -374,7 +471,6 @@ const SettingsPage = () => {
               <ul className="text-xs text-gray-400 space-y-1 ml-4">
                 <li>• Permanently delete all your data</li>
                 <li>• Remove all integration connections</li>
-                <li>• Cancel any active subscriptions</li>
                 <li>• Delete all analysis history</li>
               </ul>
             </div>

@@ -1,8 +1,8 @@
-import NextAuth, { NextAuthOptions } from "next-auth";
+import { NextAuthOptions } from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "../../../../../lib/prisma";
+import { prisma } from "../lib/prisma";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -22,26 +22,19 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-  async jwt({ token, account }) {
-    if (account) {
-      console.log("Account received:", account.provider);
-      token.accessToken = account.access_token ?? null;
-      token.provider = account.provider;
-    }
-    return token;
-  },
+    async jwt({ token, account }) {
+      if (account) {
+        token.accessToken = account.access_token ?? null;
+        token.provider = account.provider;
+      }
+      return token;
+    },
 
-  async session({ session, token }) {
-    if (token) {
+    async session({ session, token }) {
       (session as any).accessToken = token.accessToken ?? null;
       (session as any).provider = token.provider ?? null;
-      console.log('Session callback - provider:', token.provider, 'has token:', !!token.accessToken);
-    }
-    return session;
+      return session;
+    },
   },
-},
   secret: process.env.NEXTAUTH_SECRET,
 };
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };

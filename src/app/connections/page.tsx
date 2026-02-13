@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -72,6 +74,7 @@ type ConnectionStatus = {
 
 const IntegrationsPage = () => {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
   const [connections, setConnections] = useState<Record<ConnectionKeys, ConnectionStatus>>({
@@ -86,9 +89,78 @@ const IntegrationsPage = () => {
     },
   });
 
+  // Auto-connect GitHub if user logged in with GitHub
+  useEffect(() => {
+    if (session && (session as any).provider === 'github') {
+      testGitHubConnection(true);
+    }
+  }, [session]);
+
+  // GitHub connection test
+  const testGitHubConnection = async (silent = false) => {
+    if (!session) {
+      signIn("github", {
+        scope: "read:user user:email repo"
+      });
+      return;
+    }
+
+    // Show loading state
+    setConnections((prev) => ({
+      ...prev,
+      github: {
+        connected: false,
+        lastSync: "Connecting...",
+        syncStatus: "pending",
+      },
+    }));
+
+    try {
+      const response = await fetch('/api/github/test');
+      const data = await response.json();
+      
+      if (data.success) {
+        if (!silent) {
+          alert(
+            `GitHub connected successfully!` 
+          );
+        }
+        setConnections((prev) => ({
+          ...prev,
+          github: {
+            connected: true,
+            lastSync: "Just now",
+            syncStatus: "success",
+            repoCount: data.repoCount,
+            username: data.username,
+          },
+        }));
+      } else {
+        if (!silent) {
+          alert('Connection failed:\n\n' + (data.error || 'Unknown error'));
+        }
+        setConnections((prev) => ({
+          ...prev,
+          github: {
+            connected: false,
+          },
+        }));
+      }
+    } catch (error: any) {
+      if (!silent) {
+        alert('Connection failed:\n\n' + error.message);
+      }
+      setConnections((prev) => ({
+        ...prev,
+        github: {
+          connected: false,
+        },
+      }));
+    }
+  };
+
   // Jira connection test
   const testJiraConnection = async () => {
-    // Show loading state
     setConnections((prev) => ({
       ...prev,
       jira: {
@@ -140,7 +212,6 @@ const IntegrationsPage = () => {
 
   // SonarQube connection test
   const testSonarQubeConnection = async () => {
-    // Show loading state
     setConnections((prev) => ({
       ...prev,
       sonarqube: {
@@ -190,16 +261,27 @@ const IntegrationsPage = () => {
   };
 
   const handleConnect = (key: ConnectionKeys) => {
-    // For Jira
-    if (key === "jira") {
+    // For GitHub
+    if (key === "github") {
       if (connections[key].connected) {
-        // Disconnect
         setConnections((prev) => ({
           ...prev,
           [key]: { connected: false },
         }));
       } else {
-        // Connect using real API
+        testGitHubConnection();
+      }
+      return;
+    }
+
+    // For Jira
+    if (key === "jira") {
+      if (connections[key].connected) {
+        setConnections((prev) => ({
+          ...prev,
+          [key]: { connected: false },
+        }));
+      } else {
         testJiraConnection();
       }
       return;
@@ -208,41 +290,18 @@ const IntegrationsPage = () => {
     // For SonarQube
     if (key === "sonarqube") {
       if (connections[key].connected) {
-        // Disconnect
         setConnections((prev) => ({
           ...prev,
           [key]: { connected: false },
         }));
       } else {
-        // Connect using real API
         testSonarQubeConnection();
       }
       return;
     }
-
-    // For GitHub, use mock for now
-    if (connections[key].connected) {
-      // Disconnect
-      setConnections((prev) => ({
-        ...prev,
-        [key]: { connected: false },
-      }));
-    } else {
-      // Connect (mock)
-      setConnections((prev) => ({
-        ...prev,
-        [key]: {
-          connected: true,
-          lastSync: "Just now",
-          syncStatus: "success",
-          repoCount: 12,
-        },
-      }));
-    }
   };
 
   const handleSync = (key: ConnectionKeys) => {
-    // Mock sync action
     setConnections((prev) => ({
       ...prev,
       [key]: {
@@ -252,7 +311,6 @@ const IntegrationsPage = () => {
       },
     }));
 
-    // Simulate sync completion
     setTimeout(() => {
       setConnections((prev) => ({
         ...prev,
@@ -504,6 +562,7 @@ const IntegrationsPage = () => {
             <div className="space-y-2 text-sm text-gray-300">
               <p>
                 <strong className="text-white">GitHub:</strong> Analyzes commit history, code changes, and identifies bug patterns across your repositories.
+                {!session && <span className="text-yellow-500 ml-1">(Login with GitHub to connect)</span>}
               </p>
               <p>
                 <strong className="text-white">Jira:</strong> Maps business priorities to technical work and detects hidden dependencies between tasks.

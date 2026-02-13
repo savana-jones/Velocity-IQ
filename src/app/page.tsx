@@ -49,10 +49,9 @@ export default function Home() {
           VelocityIQ
         </h1>
         <p className="max-w-2xl text-lg md:text-xl text-gray-400 leading-relaxed">
-          Smarter Sprint Planning & Team Insights powered by GitHub + Jira.
+          Smarter Sprint Tracking & Code Quality Insights powered by GitHub + Jira.
           <br />
-          Predict workload balance, prevent burnout, and optimize your
-          development flow.
+          Unify repository activity, issue progress and code quality metrics in one dashboard.
         </p>
       </section>
     </main>

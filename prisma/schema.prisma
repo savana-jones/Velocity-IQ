@@ -21,6 +21,7 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  preferences   UserPreferences?
 }
 
 model Account {
@@ -57,4 +58,31 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model UserPreferences {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Profile
+  fullName              String?
+  
+  // Notifications
+  emailNotifications    Boolean  @default(true)
+  slackNotifications    Boolean  @default(false)
+  slackWebhookUrl       String?
+  
+  // Analysis Settings
+  autoSync              Boolean  @default(true)
+  syncInterval          Int      @default(30)
+  riskScoreThreshold    Float    @default(8.0)
+  
+  // System Settings
+  language              String   @default("en-US")
+  timezone              String   @default("UTC")
+  darkMode              Boolean  @default(true)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
