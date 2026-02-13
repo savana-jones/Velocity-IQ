@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import Image from "next/image";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -20,7 +19,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { label: "Dashboard", icon: Home, path: "/" },
+  { label: "Dashboard", icon: Home, path: "/dashboard" },
   { label: "Integrations", icon: GitPullRequest, path: "/connections" },
   { label: "Technical Debt", icon: AlertTriangle, path: "/tech-debt" },
   { label: "Dependencies", icon: GitBranch, path: "/dependencies" },
@@ -76,6 +75,8 @@ const IntegrationsPage = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
+
   
   const [connections, setConnections] = useState<Record<ConnectionKeys, ConnectionStatus>>({
     github: {
@@ -389,15 +390,32 @@ const IntegrationsPage = () => {
           </div>
           <div className="flex items-center gap-4">
             <Bell className="w-6 h-6 text-yellow-500 cursor-pointer" />
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-500 cursor-pointer">
-              <Image
-                src="/profile.jpg"
-                alt="Profile"
-                width={40}
-                height={40}
-                className="object-cover"
-              />
+            <div className="relative">
+              <div
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-500 cursor-pointer"
+              >
+                <Image
+                  src="/profile.jpg"
+                  alt="Profile"
+                  width={40}
+                  height={40}
+                  className="object-cover"
+                />
+              </div>
+
+              {profileOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-zinc-900 border border-zinc-800 rounded-lg shadow-lg z-50">
+                  <button
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="w-full px-4 py-2 text-left text-red-500 hover:bg-zinc-800 rounded-lg"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
+
           </div>
         </header>
 

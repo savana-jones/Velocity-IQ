@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { label: "Dashboard", icon: Home, path: "/" },
+  { label: "Dashboard", icon: Home, path: "/dashboard" },
   { label: "Integrations", icon: GitPullRequest, path: "/connections" },
   { label: "Technical Debt", icon: AlertTriangle, path: "/tech-debt" },
   { label: "Dependencies", icon: GitBranch, path: "/dependencies" },
@@ -33,8 +33,10 @@ const navItems = [
 const SettingsPage = () => {
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
+
   const router = useRouter();
-  
+
   // Form state
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -61,16 +63,16 @@ const SettingsPage = () => {
 
   const loadPreferences = async () => {
     try {
-      const response = await fetch('/api/preferences');
+      const response = await fetch("/api/preferences");
       const data = await response.json();
-      
+
       if (data.success && data.preferences) {
         const prefs = data.preferences;
-        setFullName(prefs.fullName || '');
-        setEmail(session?.user?.email || '');
+        setFullName(prefs.fullName || "");
+        setEmail(session?.user?.email || "");
         setEmailNotifications(prefs.emailNotifications);
         setSlackNotifications(prefs.slackNotifications);
-        setSlackWebhookUrl(prefs.slackWebhookUrl || '');
+        setSlackWebhookUrl(prefs.slackWebhookUrl || "");
         setAutoSync(prefs.autoSync);
         setSyncInterval(prefs.syncInterval.toString());
         setRiskThreshold(prefs.riskScoreThreshold);
@@ -79,7 +81,7 @@ const SettingsPage = () => {
         setDarkMode(prefs.darkMode);
       }
     } catch (error) {
-      console.error('Failed to load preferences:', error);
+      console.error("Failed to load preferences:", error);
     } finally {
       setLoading(false);
     }
@@ -88,9 +90,9 @@ const SettingsPage = () => {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      const response = await fetch('/api/preferences', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName,
           emailNotifications,
@@ -106,7 +108,7 @@ const SettingsPage = () => {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         alert("Settings saved successfully!");
       } else {
@@ -121,34 +123,42 @@ const SettingsPage = () => {
 
   const handleTestNotification = async () => {
     try {
-      const response = await fetch('/api/notifications/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/notifications/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: '🧪 Test Notification from VelocityIQ',
-          message: 'This is a test notification. Your notification settings are working correctly!',
+          title: "🧪 Test Notification from VelocityIQ",
+          message:
+            "This is a test notification. Your notification settings are working correctly!",
         }),
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
-        let msg = 'Test notification sent!\n\n';
-        if (data.sent.email) msg += '📧 Email: Sent\n';
-        if (data.sent.slack) msg += '💬 Slack: Sent\n';
+        let msg = "Test notification sent!\n\n";
+        if (data.sent.email) msg += "📧 Email: Sent\n";
+        if (data.sent.slack) msg += "💬 Slack: Sent\n";
         if (!data.sent.email && !data.sent.slack) {
-          msg = 'No notifications sent. Enable email or Slack notifications first.';
+          msg =
+            "No notifications sent. Enable email or Slack notifications first.";
         }
         alert(msg);
       }
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      alert("Error: " + error.message);
     }
   };
 
   const handleDeleteAccount = () => {
-    if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      alert("Account deletion initiated. You will receive a confirmation email.");
+    if (
+      confirm(
+        "Are you sure you want to delete your account? This action cannot be undone.",
+      )
+    ) {
+      alert(
+        "Account deletion initiated. You will receive a confirmation email.",
+      );
     }
   };
 
@@ -180,7 +190,11 @@ const SettingsPage = () => {
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="text-yellow-500 focus:outline-none"
           >
-            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {sidebarOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
           </button>
         </div>
         <nav className="flex-1 flex flex-col mt-4">
@@ -203,7 +217,9 @@ const SettingsPage = () => {
                   }`}
                 />
                 {sidebarOpen && (
-                  <span className={`${isSelected ? "text-black" : ""}`}>{label}</span>
+                  <span className={`${isSelected ? "text-black" : ""}`}>
+                    {label}
+                  </span>
                 )}
               </button>
             );
@@ -225,25 +241,46 @@ const SettingsPage = () => {
                 className="object-cover"
               />
             </div>
-            <span className="text-xl font-semibold text-yellow-500">VelocityIQ</span>
+            <span className="text-xl font-semibold text-yellow-500">
+              VelocityIQ
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <Bell className="w-6 h-6 text-yellow-500 cursor-pointer" />
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-500 cursor-pointer">
-              <Image
-                src="/profile.jpg"
-                alt="Profile"
-                width={40}
-                height={40}
-                className="object-cover"
-              />
-            </div>
+            <div className="relative">
+  <div
+    onClick={() => setProfileOpen(!profileOpen)}
+    className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-500 cursor-pointer"
+  >
+    <Image
+      src="/profile.jpg"
+      alt="Profile"
+      width={40}
+      height={40}
+      className="object-cover"
+    />
+  </div>
+
+  {profileOpen && (
+    <div className="absolute right-0 mt-2 w-40 bg-zinc-900 border border-zinc-800 rounded-lg shadow-lg z-50">
+      <button
+        onClick={() => signOut({ callbackUrl: "/" })}
+        className="w-full px-4 py-2 text-left text-red-500 hover:bg-zinc-800 rounded-lg"
+      >
+        Logout
+      </button>
+    </div>
+  )}
+</div>
+
           </div>
         </header>
 
         {/* Content */}
         <main className="flex-1 p-8 bg-black overflow-auto">
-          <h2 className="text-2xl font-semibold text-yellow-500 mb-6">Settings</h2>
+          <h2 className="text-2xl font-semibold text-yellow-500 mb-6">
+            Settings
+          </h2>
 
           {/* Profile Settings */}
           <section className="mb-8 bg-zinc-900 rounded-xl p-6 border border-zinc-800">
@@ -253,7 +290,9 @@ const SettingsPage = () => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Full Name</label>
+                <label className="text-xs text-gray-400 mb-1 block">
+                  Full Name
+                </label>
                 <input
                   type="text"
                   placeholder="John Doe"
@@ -263,7 +302,9 @@ const SettingsPage = () => {
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Email</label>
+                <label className="text-xs text-gray-400 mb-1 block">
+                  Email
+                </label>
                 <input
                   type="email"
                   value={email}
@@ -292,7 +333,9 @@ const SettingsPage = () => {
               <div className="flex items-center justify-between p-3 bg-black rounded-lg border border-zinc-700">
                 <div>
                   <div className="font-medium">Email Notifications</div>
-                  <div className="text-xs text-gray-400">Receive alerts about critical tech debt and dependencies</div>
+                  <div className="text-xs text-gray-400">
+                    Receive alerts about critical tech debt and dependencies
+                  </div>
                 </div>
                 <button
                   onClick={() => setEmailNotifications(!emailNotifications)}
@@ -309,7 +352,9 @@ const SettingsPage = () => {
               <div className="flex items-center justify-between p-3 bg-black rounded-lg border border-zinc-700">
                 <div>
                   <div className="font-medium">Slack Notifications</div>
-                  <div className="text-xs text-gray-400">Send alerts to your Slack workspace</div>
+                  <div className="text-xs text-gray-400">
+                    Send alerts to your Slack workspace
+                  </div>
                 </div>
                 <button
                   onClick={() => setSlackNotifications(!slackNotifications)}
@@ -325,7 +370,9 @@ const SettingsPage = () => {
 
               {slackNotifications && (
                 <div className="p-3 bg-black rounded-lg border border-zinc-700">
-                  <label className="text-xs text-gray-400 mb-1 block">Slack Webhook URL</label>
+                  <label className="text-xs text-gray-400 mb-1 block">
+                    Slack Webhook URL
+                  </label>
                   <input
                     type="url"
                     placeholder="https://hooks.slack.com/services/..."
@@ -351,7 +398,9 @@ const SettingsPage = () => {
               <div className="flex items-center justify-between p-3 bg-black rounded-lg border border-zinc-700">
                 <div>
                   <div className="font-medium">Auto-Sync</div>
-                  <div className="text-xs text-gray-400">Automatically sync data from integrations</div>
+                  <div className="text-xs text-gray-400">
+                    Automatically sync data from integrations
+                  </div>
                 </div>
                 <button
                   onClick={() => setAutoSync(!autoSync)}
@@ -381,7 +430,9 @@ const SettingsPage = () => {
               </div>
 
               <div className="p-3 bg-black rounded-lg border border-zinc-700">
-                <label className="block mb-2 font-medium">Risk Score Threshold</label>
+                <label className="block mb-2 font-medium">
+                  Risk Score Threshold
+                </label>
                 <div className="flex items-center gap-4">
                   <input
                     type="range"
@@ -389,10 +440,14 @@ const SettingsPage = () => {
                     max="10"
                     step="0.5"
                     value={riskThreshold}
-                    onChange={(e) => setRiskThreshold(parseFloat(e.target.value))}
+                    onChange={(e) =>
+                      setRiskThreshold(parseFloat(e.target.value))
+                    }
                     className="flex-1"
                   />
-                  <span className="text-yellow-500 font-bold w-12">{riskThreshold.toFixed(1)}</span>
+                  <span className="text-yellow-500 font-bold w-12">
+                    {riskThreshold.toFixed(1)}
+                  </span>
                 </div>
                 <div className="text-xs text-gray-400 mt-1">
                   Alert when risk score exceeds this threshold
@@ -403,11 +458,15 @@ const SettingsPage = () => {
 
           {/* System Settings */}
           <section className="mb-8 bg-zinc-900 rounded-xl p-6 border border-zinc-800">
-            <h3 className="text-lg font-semibold text-yellow-500 mb-4">System</h3>
+            <h3 className="text-lg font-semibold text-yellow-500 mb-4">
+              System
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Language</label>
-                <select 
+                <label className="text-xs text-gray-400 mb-1 block">
+                  Language
+                </label>
+                <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
                   className="w-full p-3 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-yellow-500 text-white"
@@ -419,7 +478,9 @@ const SettingsPage = () => {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Timezone</label>
+                <label className="text-xs text-gray-400 mb-1 block">
+                  Timezone
+                </label>
                 <select
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
@@ -437,13 +498,19 @@ const SettingsPage = () => {
             <div className="mt-4 flex items-center justify-between p-3 bg-black rounded-lg border border-zinc-700">
               <div>
                 <div className="font-medium">Dark Mode</div>
-                <div className="text-xs text-gray-400">Toggle dark/light theme</div>
+                <div className="text-xs text-gray-400">
+                  Toggle dark/light theme
+                </div>
               </div>
               <button
                 onClick={() => setDarkMode(!darkMode)}
                 className="flex items-center gap-2 px-4 py-2 border border-yellow-500 rounded-lg hover:bg-zinc-800 transition text-yellow-500 font-semibold"
               >
-                {darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                {darkMode ? (
+                  <Moon className="w-5 h-5" />
+                ) : (
+                  <Sun className="w-5 h-5" />
+                )}
                 {darkMode ? "Dark" : "Light"}
               </button>
             </div>
@@ -457,13 +524,15 @@ const SettingsPage = () => {
               className="px-6 py-3 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-600 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-5 h-5" />
-              {saving ? 'Saving...' : 'Save All Settings'}
+              {saving ? "Saving..." : "Save All Settings"}
             </button>
           </div>
 
           {/* Danger Zone */}
           <section className="bg-zinc-900 rounded-xl p-6 border border-red-800">
-            <h3 className="text-lg font-semibold text-red-500 mb-4">Danger Zone</h3>
+            <h3 className="text-lg font-semibold text-red-500 mb-4">
+              Danger Zone
+            </h3>
             <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-lg mb-4">
               <p className="text-sm text-gray-300 mb-2">
                 Once you delete your account, there is no going back. This will:
